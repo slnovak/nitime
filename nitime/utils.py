@@ -787,11 +787,11 @@ def sax(ts, symbol_count=5, phrase_length=10):
 
         >>> t1 = ts.TimeSeries([np.cos(np.linspace(0, 2*np.pi, 500)),
         ...                     np.sin(np.linspace(0, 2*np.pi, 500))], sampling_rate=1)
-        >>> sax(ts)
+        >>> sax(t1)
         ['edcbaabcde', 'deeedbaaab']
-        >>> sax(ts, symbol_count=8)
+        >>> sax(t1, symbol_count=8)
         ['hgebaabegh', 'fghgfcbabc']
-        >>> sax(ts, symbol_count=8, phrase_length=15)
+        >>> sax(t1, symbol_count=8, phrase_length=15)
         ['hggecbaaabceggh', 'eghhhgfdcbaaabd']
 
         Resources
