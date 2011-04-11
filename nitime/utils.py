@@ -3,8 +3,10 @@
 XXX wrie top level doc-string
 
 """
+import string
 import numpy as np
 import scipy.linalg as linalg
+from scipy.stats import norm
 from numpy.linalg import inv
 
 
@@ -750,6 +752,93 @@ def zero_pad(time_series,NFFT):
         del tmp
     
     return time_series
+
+def sax(ts, symbol_count=5, phrase_length=10):
+        """ Return the SAX representation of the timeseries data
+
+        For a given multi-variate TimeSeries object, we can represent the data in
+        symbolic form, making it considerably easier to perform indexing,
+        clustering, classification, etc. In this approach, the data is normalized
+        under the assumption that it forms a Gaussian distribution about the mean,
+        where we compute the Piecewise Aggregrate Approximation (PAA). From that
+        point on, we characterize those given segments by a character determined
+        by where the mean value of that segment falls in with the global mean.
+
+        Parameters
+        ----------
+
+        ts : TimeSeries object
+
+        symbol_count : integer
+        The number of characters to use in the representation. Characters will
+        be selected in order from [a-z][A-Z].
+
+        phrase_length : integer
+        The overall length of the SAX representation.
+
+        Returns
+        -------
+        A list containing the SAX representational string for each component
+        in the TimeSeries data collection
+
+        Examples
+        --------
+        The SAX representation of sine and cosine waves
+
+        >>> t1 = ts.TimeSeries([np.cos(np.linspace(0, 2*np.pi, 500)),
+        ...                     np.sin(np.linspace(0, 2*np.pi, 500))], sampling_rate=1)
+        >>> sax(ts)
+        ['edcbaabcde', 'deeedbaaab']
+        >>> sax(ts, symbol_count=8)
+        ['hgebaabegh', 'fghgfcbabc']
+        >>> sax(ts, symbol_count=8, phrase_length=15)
+        ['hggecbaaabceggh', 'eghhhgfdcbaaabd']
+
+        Resources
+        ---------
+        Original Paper:
+        http://www.cs.ucr.edu/~eamonn/SAX.pdf
+                                                                                                                                                                    
+        Credits:
+        Jessica Lin, Eamonn Keogh, Stefano Lonardi, Bill Chiu
+
+        """
+
+        # First, we're going to need to cache off a copy of self's data collection
+        # so that we can properly normalize it.
+        normalized_data = np.copy(ts.data)
+
+        # Shift the data so that the mean is zero. Note that we're calculating the
+        # mean for each data subset so that we can output a SAX representation
+        # for each dimension.
+        normalized_data -= np.split(np.mean(normalized_data, axis=1), normalized_data.shape[0])
+
+        # Scale the data so that it has a standard deviation of 1.
+        normalized_data *= np.split(1.0/normalized_data.std(axis=1), normalized_data.shape[0])
+
+        # Calculate our breakpoint locations given symbol_count. We're going to
+        # concatenate Inf to our breakpoints to help in calculating our
+        # intervals.
+        breakpoints = norm.ppf(np.linspace(1./symbol_count, 1-1./symbol_count, symbol_count-1))
+        breakpoints = np.concatenate((breakpoints, np.array([np.Inf])))
+
+        # Split the data into phrase_length pieces.
+        normalized_data = np.array_split(normalized_data, phrase_length, axis=1)
+
+        # Calculate the mean for each section.
+        section_means = [np.mean(section, axis=1) for section in normalized_data]
+
+        # Figure out which break each section is in based on the section_means and
+        # calculated breakpoints.
+        section_locations = [[np.where(breakpoints > axis_mean)[0][0]
+            for axis_mean in section_mean] for section_mean in section_means]
+        section_locations = zip(*section_locations)
+
+        # Convert the location into the corresponding letter.
+        sax_phrases = [''.join([string.ascii_letters[ind] for ind in section_location])
+            for section_location in section_locations]
+
+        return sax_phrases
 
 #-----------------------------------------------------------------------------
 # Numpy utilities - Note: these have been sent into numpy itself, so eventually
