@@ -1193,7 +1193,7 @@ class TimeSeries(TimeSeriesBase):
 
         # Convert the location into the corresponding letter.
         sax_phrases = [''.join([string.ascii_letters[ind] for ind in section_location])
-                for section_location in section_locations] 
+            for section_location in section_locations] 
 
         return sax_phrases
 
